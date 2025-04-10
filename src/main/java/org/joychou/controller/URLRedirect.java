@@ -11,69 +11,83 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
-/**
- * @author: JoyChou (joychou@joychou.org)
- * @date:   2017.12.28
- * @desc:   Java url redirect
- */
+import org.joychou.security.SecurityUtil;
 
+/**
+ * The vulnerability code and security code of Java url redirect.
+ * The security code is checking whitelist of url redirect.
+ *
+ * @author JoyChou (joychou@joychou.org)
+ * @version 2017.12.28
+ */
 
 @Controller
 @RequestMapping("/urlRedirect")
 public class URLRedirect {
 
     /**
-     * @disc: 存在URL重定向漏洞
-     * @fix: 添加URL白名单 https://github.com/JoyChou93/trident/blob/master/src/main/java/CheckURL.java
+     * http://localhost:8080/urlRedirect/redirect?url=http://www.baidu.com
      */
     @GetMapping("/redirect")
     public String redirect(@RequestParam("url") String url) {
         return "redirect:" + url;
     }
 
+
     /**
-     * @disc: 存在URL重定向漏洞
-     * @fix: 添加URL白名单 https://github.com/JoyChou93/trident/blob/master/src/main/java/CheckURL.java
+     * http://localhost:8080/urlRedirect/setHeader?url=http://www.baidu.com
      */
     @RequestMapping("/setHeader")
     @ResponseBody
-    public static void setHeader(HttpServletRequest request, HttpServletResponse response){
+    public static void setHeader(HttpServletRequest request, HttpServletResponse response) {
         String url = request.getParameter("url");
         response.setStatus(HttpServletResponse.SC_MOVED_PERMANENTLY); // 301 redirect
         response.setHeader("Location", url);
     }
 
+
     /**
-     * @disc: 存在URL重定向漏洞
-     * @fix: 添加URL白名单 https://github.com/JoyChou93/trident/blob/master/src/main/java/CheckURL.java
+     * http://localhost:8080/urlRedirect/sendRedirect?url=http://www.baidu.com
      */
     @RequestMapping("/sendRedirect")
     @ResponseBody
-    public static void sendRedirect(HttpServletRequest request, HttpServletResponse response) throws IOException{
+    public static void sendRedirect(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String url = request.getParameter("url");
         response.sendRedirect(url); // 302 redirect
     }
 
 
     /**
-     * @usage: http://localhost:8080/urlRedirect/forward?url=/urlRedirect/test
-     * @disc: 安全代码，没有URL重定向漏洞。
+     * Safe code. Because it can only jump according to the path, it cannot jump according to other urls.
+     * http://localhost:8080/urlRedirect/forward?url=/urlRedirect/test
      */
     @RequestMapping("/forward")
     @ResponseBody
-    public static void forward(HttpServletRequest request, HttpServletResponse response) throws IOException{
+    public static void forward(HttpServletRequest request, HttpServletResponse response) {
         String url = request.getParameter("url");
-        RequestDispatcher rd =request.getRequestDispatcher(url);
-        try{
+        RequestDispatcher rd = request.getRequestDispatcher(url);
+        try {
             rd.forward(request, response);
-        }catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    @RequestMapping("/test")
+
+    /**
+     * Safe code of sendRedirect.
+     * http://localhost:8080/urlRedirect/sendRedirect/sec?url=http://www.baidu.com
+     */
+    @RequestMapping("/sendRedirect/sec")
     @ResponseBody
-    public static String test() {
-        return "test";
+    public void sendRedirect_seccode(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        String url = request.getParameter("url");
+        if (SecurityUtil.checkURL(url) == null) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.getWriter().write("url forbidden");
+            return;
+        }
+        response.sendRedirect(url);
     }
 }

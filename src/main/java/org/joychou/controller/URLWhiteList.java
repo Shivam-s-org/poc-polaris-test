@@ -1,102 +1,171 @@
 package org.joychou.controller;
 
 
-import com.google.common.net.InternetDomainName;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.joychou.security.SecurityUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * date: 2018年08月23日
- * author: JoyChou
- * desc: URL白名单绕过
+ * The vulnerability code and security code of Java url whitelist.
+ * The security code is checking url whitelist.
+ *
+ * @author JoyChou (joychou@joychou.org)
+ * @version 2018.08.23
  */
 
-@Controller
+@RestController
 @RequestMapping("/url")
 public class URLWhiteList {
 
 
-    private String urlwhitelist = "joychou.com";
+    private String domainwhitelist[] = {"joychou.org", "joychou.com"};
+    private static final Logger logger = LoggerFactory.getLogger(URLWhiteList.class);
 
+    /**
+     * bypass poc: bypassjoychou.org
+     * http://localhost:8080/url/vuln/endswith?url=http://aaajoychou.org
+     */
+    @GetMapping("/vuln/endsWith")
+    public String endsWith(@RequestParam("url") String url) {
 
-    // 绕过方法bypassjoychou.com
-    @RequestMapping("/endswith")
-    @ResponseBody
-    public String endsWith(HttpServletRequest request) throws Exception{
-        String url = request.getParameter("url");
-        System.out.println(url);
-        URL u = new URL(url);
-        String host = u.getHost().toLowerCase();
-        String rootDomain = InternetDomainName.from(host).topPrivateDomain().toString();
+        String host = SecurityUtil.gethost(url);
 
-        if (rootDomain.endsWith(urlwhitelist)) {
-            return "URL is legal";
-        } else {
-            return "URL is illegal";
+        for (String domain : domainwhitelist) {
+            if (host.endsWith(domain)) {
+                return "Good url.";
+            }
         }
+        return "Bad url.";
     }
 
-    // 绕过方法joychou.com.bypass.com  bypassjoychou.com
-    @RequestMapping("/contains")
-    @ResponseBody
-    public String contains(HttpServletRequest request) throws Exception{
-        String url = request.getParameter("url");
-        URL u = new URL(url);
-        String host = u.getHost().toLowerCase();
-        String rootDomain = InternetDomainName.from(host).topPrivateDomain().toString();
 
-        if (rootDomain.contains(urlwhitelist)) {
-            return "URL is legal";
-        } else {
-            return "URL is illegal";
+    /**
+     * It's the same with <code>indexOf</code>.
+     * <p>
+     * http://localhost:8080/url/vuln/contains?url=http://joychou.org.bypass.com
+     * http://localhost:8080/url/vuln/contains?url=http://bypassjoychou.org
+     */
+    @GetMapping("/vuln/contains")
+    public String contains(@RequestParam("url") String url) {
+
+        String host = SecurityUtil.gethost(url);
+
+        for (String domain : domainwhitelist) {
+            if (host.contains(domain)) {
+                return "Good url.";
+            }
         }
+        return "Bad url.";
     }
 
-    // 绕过方法bypassjoychou.com，代码功能和endsWith一样/
-    @RequestMapping("/regex")
-    @ResponseBody
-    public String regex(HttpServletRequest request) throws Exception{
-        String url = request.getParameter("url");
-        URL u = new URL(url);
-        String host = u.getHost().toLowerCase();
-        String rootDomain = InternetDomainName.from(host).topPrivateDomain().toString();
 
-        Pattern p = Pattern.compile("joychou\\.com");
-        Matcher m = p.matcher(rootDomain);
+    /**
+     * bypass poc: bypassjoychou.org. It's the same with endsWith.
+     * http://localhost:8080/url/vuln/regex?url=http://aaajoychou.org
+     */
+    @GetMapping("/vuln/regex")
+    public String regex(@RequestParam("url") String url) {
+
+        String host = SecurityUtil.gethost(url);
+        Pattern p = Pattern.compile("joychou\\.org$");
+        Matcher m = p.matcher(host);
+
         if (m.find()) {
-            return "URL is legal";
+            return "Good url.";
         } else {
-            return "URL is illegal";
+            return "Bad url.";
         }
     }
 
 
-    // 安全代码
-    @RequestMapping("/seccode")
-    @ResponseBody
-    public String seccode(HttpServletRequest request) throws Exception{
-        String url = request.getParameter("url");
+    /**
+     * The bypass of using {@link java.net.URL} to getHost.
+     * <p>
+     * <a href="http://localhost:8080/url/vuln/url_bypass?url=http://evil.com%5c@www.joychou.org/a.html">bypass 1</a>
+     * <a href="http://localhost:8080/url/vuln/url_bypass?url=http://evil.com%5cwww.joychou.org/a.html">bypass 2</a>
+     *
+     * <p>
+     * <a href="https://github.com/JoyChou93/java-sec-code/wiki/URL-whtielist-Bypass">More details</a>
+     */
+    @GetMapping("/vuln/url_bypass")
+    public void url_bypass(String url, HttpServletResponse res) throws IOException {
+
+        logger.info("url:  " + url);
+
+        if (!SecurityUtil.isHttp(url)) {
+            return;
+        }
+
         URL u = new URL(url);
-        // 判断是否是http(s)协议
-        if (!u.getProtocol().startsWith("http") && !u.getProtocol().startsWith("https")) {
-            return "URL is not http or https";
-        }
-        String host = u.getHost().toLowerCase();
-        // 如果非顶级域名后缀会报错
-        String rootDomain = InternetDomainName.from(host).topPrivateDomain().toString();
+        String host = u.getHost();
+        logger.info("host:  " + host);
 
-        if (rootDomain.equals(urlwhitelist)) {
-            return "URL is legal";
-        } else {
-            return "URL is illegal";
+        // endsWith .
+        for (String domain : domainwhitelist) {
+            if (host.endsWith("." + domain)) {
+                res.sendRedirect(url);
+            }
         }
+
     }
 
+
+    /**
+     * First-level & Multi-level host whitelist.
+     * http://localhost:8080/url/sec?url=http://aa.joychou.org
+     */
+    @GetMapping("/sec")
+    public String sec(@RequestParam("url") String url) {
+
+        String whiteDomainlists[] = {"joychou.org", "joychou.com", "test.joychou.me"};
+
+        if (!SecurityUtil.isHttp(url)) {
+            return "SecurityUtil is not http or https";
+        }
+
+        String host = SecurityUtil.gethost(url);
+
+        for (String whiteHost: whiteDomainlists){
+            if (whiteHost.startsWith(".") && host.endsWith(whiteHost)) {
+                return url;
+            } else if (!whiteHost.startsWith(".") && host.equals(whiteHost)) {
+                return url;
+            }
+        }
+
+        return "Bad url.";
+    }
+
+
+    /**
+     * http://localhost:8080/url/sec/array_indexOf?url=http://ccc.bbb.joychou.org
+     */
+    @GetMapping("/sec/array_indexOf")
+    public String sec_array_indexOf(@RequestParam("url") String url) {
+
+        // Define muti-level host whitelist.
+        ArrayList<String> whiteDomainlists = new ArrayList<>();
+        whiteDomainlists.add("bbb.joychou.org");
+        whiteDomainlists.add("ccc.bbb.joychou.org");
+
+        if (!SecurityUtil.isHttp(url)) {
+            return "SecurityUtil is not http or https";
+        }
+
+        String host = SecurityUtil.gethost(url);
+
+        if (whiteDomainlists.indexOf(host) != -1) {
+            return "Good url.";
+        }
+        return "Bad url.";
+    }
 
 }
