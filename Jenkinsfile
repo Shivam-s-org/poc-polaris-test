@@ -8,9 +8,9 @@ pipeline {
 
     environment {
         POLARIS_SERVER_URL = 'https://poc.polaris.blackduck.com'
-        POLARIS_APP_NAME   = 'Nirmal_SCM'
+        POLARIS_APP_NAME   = 'Shivam_Jenkins'
         POLARIS_PROJECT    = 'WebGoat'
-        POLARIS_BRANCH     = 'Polaris-testing'
+        POLARIS_BRANCH     = 'main'
 
         // ✅ CORRECT build command for Java 17 + old Maven plugins
         COVERITY_BUILD_COMMAND = 'mvn clean compile -DskipTests -DskipITs -Dmaven.test.skip=true -Dgpg.skip=true'
