@@ -5,7 +5,7 @@ pool:
   vmImage: ubuntu-latest
 
 variables:
-- group: Shivam_polaris-var   # Contains POLARIS_TOKEN securely
+- group: Shivam_polaris_var   # Contains POLARIS_TOKEN securely
 
 # Static values (same as Jenkinsfile)
 - name: POLARIS_SERVER_URL
