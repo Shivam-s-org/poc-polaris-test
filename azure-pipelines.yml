@@ -5,7 +5,7 @@ pool:
   vmImage: ubuntu-latest
 
 variables:
-- group: Shivams_app   # Contains POLARIS_TOKEN securely
+- group: Shivam_polaris-var   # Contains POLARIS_TOKEN securely
 
 # Static values (same as Jenkinsfile)
 - name: POLARIS_SERVER_URL
@@ -59,9 +59,9 @@ steps:
     ./bridge-cli-bundle-linux64/bridge-cli --stage polaris \
       polaris.serverUrl=$(POLARIS_SERVER_URL) \
       polaris.accessToken=$(POLARIS_ACCESS_TOKEN) \
-      polaris.application.name=NIRMAL_SCM \
-      polaris.project.name=WebGoat \
-      polaris.branch.name=Polaris-testing \
+      polaris.application.name=Shivams_app \
+      polaris.project.name=project2 \
+      polaris.branch.name=main \
       polaris.assessment.types=SAST,SCA \
       polaris.waitForScan=true \
       polaris.reports.sarif.create=true \
