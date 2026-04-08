@@ -58,7 +58,7 @@ steps:
 - bash: |
     ./bridge-cli-bundle-linux64/bridge-cli --stage polaris \
       polaris.serverUrl=$(POLARIS_SERVER_URL) \
-      polaris.accessToken=$(POLARIS_ACCESS_TOKEN) \
+      polaris.accessToken=$(polaris_azure_token) \
       polaris.application.name=Shivams_app \
       polaris.project.name=project2 \
       polaris.branch.name=main \
